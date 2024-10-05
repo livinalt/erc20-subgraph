@@ -1,175 +1,62 @@
+//import event class from generated files
+import {Transfer} from "../generated/TetherToken/TetherToken"
+//import entities
+import {TokenBalance} from "../generated/schema"
+//import the functions defined in utils.ts
 import {
-  Issue as IssueEvent,
-  Redeem as RedeemEvent,
-  Deprecate as DeprecateEvent,
-  Params as ParamsEvent,
-  DestroyedBlackFunds as DestroyedBlackFundsEvent,
-  AddedBlackList as AddedBlackListEvent,
-  RemovedBlackList as RemovedBlackListEvent,
-  Approval as ApprovalEvent,
-  Transfer as TransferEvent,
-  Pause as PauseEvent,
-  Unpause as UnpauseEvent
-} from "../generated/TetherToken/TetherToken"
-import {
-  Issue,
-  Redeem,
-  Deprecate,
-  Params,
-  DestroyedBlackFunds,
-  AddedBlackList,
-  RemovedBlackList,
-  Approval,
-  Transfer,
-  Pause,
-  Unpause
-} from "../generated/schema"
+  fetchTokenDetails,
+  fetchAccount,
+  fetchBalance
+} from "./utils"
+//import datatype
+import { BigDecimal} from "@graphprotocol/graph-ts";
 
-export function handleIssue(event: IssueEvent): void {
-  let entity = new Issue(
-    event.transaction.hash.concatI32(event.logIndex.toI32())
-  )
-  entity.amount = event.params.amount
+export function handleTransfer(event: Transfer): void {
+    let token = fetchTokenDetails(event);
+    if (!token) { //if token == null
+        return
+      }
 
-  entity.blockNumber = event.block.number
-  entity.blockTimestamp = event.block.timestamp
-  entity.transactionHash = event.transaction.hash
+    //get account addresses from event
+    let fromAddress = event.params.from.toHex();
+    let toAddress = event.params.to.toHex();
 
-  entity.save()
-}
+    //fetch account details
+    let fromAccount = fetchAccount(fromAddress);
+    let toAccount = fetchAccount(toAddress);
 
-export function handleRedeem(event: RedeemEvent): void {
-  let entity = new Redeem(
-    event.transaction.hash.concatI32(event.logIndex.toI32())
-  )
-  entity.amount = event.params.amount
+    if (!fromAccount || !toAccount) {
+    return;
+    }
 
-  entity.blockNumber = event.block.number
-  entity.blockTimestamp = event.block.timestamp
-  entity.transactionHash = event.transaction.hash
+    //setting the token balance of the 'from' account
+    let fromTokenBalance = TokenBalance.load(token.id + "-" + fromAccount.id);
+    if (!fromTokenBalance) { //if balance is not already saved
+					//create a new TokenBalance instance
+					// while creating the new token balance,
+					// the combination of the token address 
+					// and the account address is  
+					// passed as the identifier value
+          fromTokenBalance = new TokenBalance(token.id + "-" + fromAccount.id);
+          fromTokenBalance.token = token.id;
+          fromTokenBalance.account = fromAccount.id;
+    }
 
-  entity.save()
-}
-
-export function handleDeprecate(event: DeprecateEvent): void {
-  let entity = new Deprecate(
-    event.transaction.hash.concatI32(event.logIndex.toI32())
-  )
-  entity.newAddress = event.params.newAddress
-
-  entity.blockNumber = event.block.number
-  entity.blockTimestamp = event.block.timestamp
-  entity.transactionHash = event.transaction.hash
-
-  entity.save()
-}
-
-export function handleParams(event: ParamsEvent): void {
-  let entity = new Params(
-    event.transaction.hash.concatI32(event.logIndex.toI32())
-  )
-  entity.feeBasisPoints = event.params.feeBasisPoints
-  entity.maxFee = event.params.maxFee
-
-  entity.blockNumber = event.block.number
-  entity.blockTimestamp = event.block.timestamp
-  entity.transactionHash = event.transaction.hash
-
-  entity.save()
-}
-
-export function handleDestroyedBlackFunds(
-  event: DestroyedBlackFundsEvent
-): void {
-  let entity = new DestroyedBlackFunds(
-    event.transaction.hash.concatI32(event.logIndex.toI32())
-  )
-  entity._blackListedUser = event.params._blackListedUser
-  entity._balance = event.params._balance
-
-  entity.blockNumber = event.block.number
-  entity.blockTimestamp = event.block.timestamp
-  entity.transactionHash = event.transaction.hash
-
-  entity.save()
-}
-
-export function handleAddedBlackList(event: AddedBlackListEvent): void {
-  let entity = new AddedBlackList(
-    event.transaction.hash.concatI32(event.logIndex.toI32())
-  )
-  entity._user = event.params._user
-
-  entity.blockNumber = event.block.number
-  entity.blockTimestamp = event.block.timestamp
-  entity.transactionHash = event.transaction.hash
-
-  entity.save()
-}
-
-export function handleRemovedBlackList(event: RemovedBlackListEvent): void {
-  let entity = new RemovedBlackList(
-    event.transaction.hash.concatI32(event.logIndex.toI32())
-  )
-  entity._user = event.params._user
-
-  entity.blockNumber = event.block.number
-  entity.blockTimestamp = event.block.timestamp
-  entity.transactionHash = event.transaction.hash
-
-  entity.save()
-}
-
-export function handleApproval(event: ApprovalEvent): void {
-  let entity = new Approval(
-    event.transaction.hash.concatI32(event.logIndex.toI32())
-  )
-  entity.owner = event.params.owner
-  entity.spender = event.params.spender
-  entity.value = event.params.value
-
-  entity.blockNumber = event.block.number
-  entity.blockTimestamp = event.block.timestamp
-  entity.transactionHash = event.transaction.hash
-
-  entity.save()
-}
-
-export function handleTransfer(event: TransferEvent): void {
-  let entity = new Transfer(
-    event.transaction.hash.concatI32(event.logIndex.toI32())
-  )
-  entity.from = event.params.from
-  entity.to = event.params.to
-  entity.value = event.params.value
-
-  entity.blockNumber = event.block.number
-  entity.blockTimestamp = event.block.timestamp
-  entity.transactionHash = event.transaction.hash
-
-  entity.save()
-}
-
-export function handlePause(event: PauseEvent): void {
-  let entity = new Pause(
-    event.transaction.hash.concatI32(event.logIndex.toI32())
-  )
-
-  entity.blockNumber = event.block.number
-  entity.blockTimestamp = event.block.timestamp
-  entity.transactionHash = event.transaction.hash
-
-  entity.save()
-}
-
-export function handleUnpause(event: UnpauseEvent): void {
-  let entity = new Unpause(
-    event.transaction.hash.concatI32(event.logIndex.toI32())
-  )
-
-  entity.blockNumber = event.block.number
-  entity.blockTimestamp = event.block.timestamp
-  entity.transactionHash = event.transaction.hash
-
-  entity.save()
+    fromTokenBalance.amount = fetchBalance(event.address,event.params.from)
+		//filtering out zero-balance tokens - optional
+    if(fromTokenBalance.amount != BigDecimal.fromString("0")){
+      fromTokenBalance.save();
+    }
+    
+    //setting the token balance of the 'to' account
+    let toTokenBalance = TokenBalance.load(token.id + "-" + toAccount.id);
+    if (!toTokenBalance) {
+        toTokenBalance = new TokenBalance(token.id + "-" + toAccount.id);
+        toTokenBalance.token = token.id;
+        toTokenBalance.account = toAccount.id;
+      }
+    toTokenBalance.amount = fetchBalance(event.address,event.params.to)
+    if(toTokenBalance.amount != BigDecimal.fromString("0")){
+      toTokenBalance.save();
+    }
 }
